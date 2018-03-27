@@ -57,7 +57,7 @@ def tempSocket(client):
 
     welcomeSocket.listen(1)
 
-    (tempCliSock, addr) = welcomeSocket.accept()
+    (tempCliSock, ip) = welcomeSocket.accept()
 
     welcomeSocket.close()
 
@@ -174,6 +174,11 @@ def main():
 
     print("listening to Client")
 
+    while True:
+        print('\nAwaiting connection...')
+
+        # Block until connection is received
+        (clientS, ip) = serverS.accept()
 
 if __name__ == "__main__":
     main()
