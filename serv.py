@@ -17,23 +17,18 @@ serverSource = 'serv.py'
 
 def checkBuffer(sock,inBytes):
 
-    # The buffer
-    recvBuff = ''
+    inititalBuff = ''
 
-    # Keep receiving till all is received
-    while len(recvBuff) < inBytes:
+    while len(inititalBuff) < inBytes:
 
-        # Attempt to receive bytes
-        tmpBuff = sock.recv(inBytes).decode(ConvertBits)
+        tmpBuff = sock.recv(inBytes).decode(convertBits)
 
-        # The other side has closed the socket
         if not tmpBuff:
             break
 
-        # Add the received bytes to the buffer
-        recvBuff += tmpBuff
+        inititalBuff += tmpBuff
 
-    return recvBuff
+    return inititalBuff
 
 ##########################################
 
@@ -46,22 +41,22 @@ def tempSocket(client):
 
     try:
         welcomeSocket.bind(('', 0))
-    except socket.error as msg:
-        print('Bind failed. Error Code :', str(msg))
+    except socket.error as errors:
+        print("Binding failed with Code:", str(errors))
         return None
 
-    tempPortNum = welcomeSocket.getsockname()[1]
-    print('Ephemeral port # is', tempPortNum)
+    PortNum = welcomeSocket.getsockname()[1]
+    print('Ephemeral port # is', PortNum)
 
-    client.send(str(tempPortNum).encode(ConvertBits))
+    client.send(str(PortNum).encode(convertBits))
 
     welcomeSocket.listen(1)
 
-    (tempCliSock, ip) = welcomeSocket.accept()
+    (ClientSock, ip) = welcomeSocket.accept()
 
     welcomeSocket.close()
 
-    return tempCliSock
+    return ClientSock
 
 
 
@@ -74,7 +69,7 @@ def tempSocket(client):
 
 def revFile ( textFile,welcomeSocket ):
 
-    SizeBuff = recvAll(welcomeSocket, 10)
+    SizeBuff = checkBuffer(welcomeSocket, 10)
 
     # Get the file size
     if SizeBuff == '':
@@ -108,7 +103,7 @@ def DownloadFile ( textFile, welcomeSocket):
         myFile = open(textFile, 'r')
     except OSError:
         print("Fail to open this file:", textFile)
-        tempSocket.close()
+        welcomeSocket.close()
 
     with myFile:
 
@@ -130,18 +125,21 @@ def DownloadFile ( textFile, welcomeSocket):
 
 	while RealSizeofText > NumTextSent:
 
-	    NumTextSent += welcomeSocket.send(textFile[NumTextSent:].encode(ConvertBits))
+	    NumTextSent += welcomeSocket.send(textFile[NumTextSent:].encode(convertBits))
 
 
 
 
 	if NumTextSent == 0:
 	    print ("sent error")
-
-	ThisFile.close()
+        myFile.close()
 	welcomeSocket.close()
 
 ##############################################################################
+
+def swicher(cmd):
+    cmd = ''
+
 
 
 ##############################################################################
@@ -162,23 +160,24 @@ def main():
 
     try:
         serverS.bind((serverName, serverPort))
-    except socket.error as msg:
-        print('Bind failed. Error Code:', str(msg))
+    except socket.error as errors:
+        print("Binding failed with Code:", str(errors))
 
         serverS.close()
         return
 
-    print('Completing blind')
+    print("Completing blind")
 
     serverS.listen(request_queue)
 
     print("listening to Client")
 
     while True:
-        print('\nAwaiting connection...')
+        print('Now Server is waiting connection...')
 
         # Block until connection is received
         (clientS, ip) = serverS.accept()
+
 
 if __name__ == "__main__":
     main()
