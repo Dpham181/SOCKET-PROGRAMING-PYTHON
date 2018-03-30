@@ -8,20 +8,20 @@ import pickle
 bufferSize = 4096
 request_queue = 10
 serverName = 'localhost'
-convertBits = 'UTF-32'
+convertBits = 'UTF-8'
 serverSource = 'serv.py'
 
 ##########################################
 
 # checking buffer with for loop
 
-def checkBuffer(sock,inBytes):
+def checkBuffer(checksocket,inBytes):
 
     inititalBuff = ''
 
-    while len(inititalBuff) < inBytes:
+    while (inBytes > len(inititalBuff)):
 
-        tmpBuff = sock.recv(inBytes).decode(convertBits)
+        tmpBuff = checksocket.recv(inBytes).decode(convertBits)
 
         if not tmpBuff:
             break
@@ -67,29 +67,29 @@ def tempSocket(client):
 
 # receive a file from client
 
-def revFile ( textFile,welcomeSocket ):
+def revFile(textFile,welcomeSocket):
 
-    SizeBuff = checkBuffer(welcomeSocket, 10)
+    SizeBuff = checkBuffer(welcomeSocket,10)
 
-    # Get the file size
     if SizeBuff == '':
         print("Receiving Errors.")
         return 0
     else:
         RealSize = int(SizeBuff)
 
-    print ("size.", )
-    # Get the file data
-    fileData = checkBuffer(welcomeSocket, textFile)
+    print ("Size.",RealSize)
 
-    # Open file to write to
-    fW = open(textFile, 'w+')
+    readingfile = checkBuffer(welcomeSocket, RealSize)
 
-    # Write received data to file
-    fW.write(textFile)
+    fw = open(textFile, 'w+')
 
-    # Close the file
-    fW.close()
+    fw.write(readingfile)
+
+    fw.close()
+
+
+
+
 
 
 #############################################
@@ -97,52 +97,71 @@ def revFile ( textFile,welcomeSocket ):
 
 # download file from sever by client
 
-def DownloadFile ( textFile, welcomeSocket):
+def DownloadFile (textFile, welcomeSocket):
 
     try:
         myFile = open(textFile, 'r')
     except OSError:
         print("Fail to open this file:", textFile)
         welcomeSocket.close()
+        print ("now sending the fife name",textFile)
 
     with myFile:
 
-	print ("now sending the fife name" + textFile)
-	textSize = myFile.read()
 
-    SizeofText= str(len(textSize))
+        textSize = myFile.read()
 
-    RealSizeofText = len(SizeofText)
+        if textSize:
 
-    while RealSizeofText < 10:
+            SizeofText= str(len(textSize))
 
-	textSize ='0'+textSize
+            RealSizeofText = len(SizeofText)
 
-	textSize = textSize + len(myFile.read())
+            while RealSizeofText < 10:
+                SizeofText ='0'+SizeofText
 
-
-	NumTextSent= 0
-
-	while RealSizeofText > NumTextSent:
-
-	    NumTextSent += welcomeSocket.send(textFile[NumTextSent:].encode(convertBits))
+            textSize = SizeofText + len(myFile.read())
 
 
+            RealSizeofText = len(textSize)
 
 
-	if NumTextSent == 0:
-	    print ("sent error")
-        myFile.close()
-	welcomeSocket.close()
+            NumTextSent = 0
 
-##############################################################################
+            while RealSizeofText > NumTextSent:
+                NumTextSent += welcomeSocket.send(textSize[NumTextSent:].encode(convertBits))
 
-def swicher(cmd):
-    cmd = ''
+        else:
 
+            print("Errors")
+        print('Sent', NumTextSent, 'bytes.')
 
+    myFile.close()
+    welcomeSocket.close()
+
+    return True
 
 ##############################################################################
+def putting(clientS,textFile):
+        tempS = tempSocket(clientS)
+
+        success = revFile (textFile,tempS)
+        if success == 0:
+            print('Fail to upload file', textFile)
+            clientS.send('0'.encode(convertBits))
+        else:
+            print('Uploaded compteled', textFile)
+            clientS.send('1'.encode(convertBits))
+
+
+def clientaction(cmd,clientS,textFile):
+    cmd = {
+        "put": putting(clientS,textFile)
+
+    }
+
+
+    ##############################################################################
 
 
 # Main
@@ -175,8 +194,25 @@ def main():
     while True:
         print('Now Server is waiting connection...')
 
-        # Block until connection is received
         (clientS, ip) = serverS.accept()
+        print('One client connected with IP:', ip, 'from the port #:', serverPort)
+        while True:
+            command = clientS.recv(bufferSize).decode(convertBits)
+
+            if not command:
+                print("wrong command from client")
+                break
+
+            clientCmd = command.count(' ')
+            if clientCmd == 1:
+                (cmd, textFile) = command.split()
+            elif clientCmd == 0:
+                cmd = command
+
+            if  clientCmd ==1:
+                clientaction(cmd,clientS,textFile)
+
+
 
 
 if __name__ == "__main__":
