@@ -2,9 +2,7 @@ from __future__ import print_function
 import socket
 import subprocess
 import sys
-import os
 import pickle
-
 bufferSize = 4096
 request_queue = 10
 serverName = 'localhost'
@@ -104,37 +102,36 @@ def DownloadFile (textFile, welcomeSocket):
     except OSError:
         print("Fail to open this file:", textFile)
         welcomeSocket.close()
+
         print ("now sending the fife name",textFile)
+    fileData = None
+    numSent = 0
+    while True:
+        fileData = myFile.read()
 
-    with myFile:
-
-
-        textSize = myFile.read()
-
-        if textSize:
-
-            SizeofText= str(len(textSize))
-
-            RealSizeofText = len(SizeofText)
-
-            while RealSizeofText < 10:
-                SizeofText ='0'+SizeofText
-
-            textSize = SizeofText + len(myFile.read())
+        if fileData:
 
 
-            RealSizeofText = len(textSize)
+            dataSizeStr = str(len(fileData))
 
 
-            NumTextSent = 0
+            while len(dataSizeStr) < 10:
 
-            while RealSizeofText > NumTextSent:
-                NumTextSent += welcomeSocket.send(textSize[NumTextSent:].encode(convertBits))
+                dataSizeStr = "0" + dataSizeStr
+
+            fileData = dataSizeStr + fileData
+
+
+
+            while len(fileData) > numSent:
+                numSent += welcomeSocket.send(fileData[numSent:].encode(convertBits))
 
         else:
+            break
 
-            print("Errors")
-        print('Sent', NumTextSent, 'bytes.')
+        print('Sent', numSent, 'bytes.')
+
+
 
     myFile.close()
     welcomeSocket.close()
@@ -142,26 +139,62 @@ def DownloadFile (textFile, welcomeSocket):
     return True
 
 ##############################################################################
-def putting(clientS,textFile):
+
+def putting ( clientS, textFile ):
         tempS = tempSocket(clientS)
 
-        success = revFile (textFile,tempS)
-        if success == 0:
+        done = revFile(textFile, tempS)
+        if done == 0:
             print('Fail to upload file', textFile)
             clientS.send('0'.encode(convertBits))
         else:
             print('Uploaded compteled', textFile)
             clientS.send('1'.encode(convertBits))
+        tempS.close()
 
 
-def clientaction(cmd,clientS,textFile):
-    cmd = {
-        "put": putting(clientS,textFile)
+def getting(clientS, textFile):
 
-    }
+    tempS = tempSocket(clientS)
+
+    done = DownloadFile(textFile, tempS)
+    if done == 0:
+        print('Fail to download file', textFile)
+        clientS.send('0'.encode(convertBits))
+    else:
+        print('dowload compteled', textFile)
+        clientS.send('1'.encode(convertBits))
+
+    tempS.close()
 
 
-    ##############################################################################
+def quiting(clientS):
+        print("Fin connection now")
+        clientS.close()
+        exit(1)
+
+def lsing(cmd, clientS):
+    tempS = tempSocket(clientS)
+
+    directory=[]
+
+    all_files = []
+
+    for line in subprocess.getstatusoutput(cmd):
+        directory.append(line)
+
+    all_files = directory[1].split('\t')
+    i = 0
+    for singlefile in all_files:
+        if singlefile == serverSource:
+            del all_files[i]
+        i = i+1
+    data_file= pickle.dumps(all_files)
+
+    tempS.send(data_file)
+
+    tempS.close()
+##############################################################################
 
 
 # Main
@@ -200,20 +233,31 @@ def main():
             command = clientS.recv(bufferSize).decode(convertBits)
 
             if not command:
-                print("wrong command from client")
+                print("Wrong command from client")
                 break
 
             clientCmd = command.count(' ')
+
             if clientCmd == 1:
                 (cmd, textFile) = command.split()
             elif clientCmd == 0:
                 cmd = command
 
-            if  clientCmd ==1:
-                clientaction(cmd,clientS,textFile)
+            if cmd == 'put' and clientCmd == 1:
+                 putting(clientS, textFile)
 
+            elif cmd == 'get' and clientCmd == 1:
+                getting(clientS,textFile)
 
+            elif cmd == 'quit' and clientCmd == 0:
+                quiting(clientS)
+                
+            elif cmd == 'ls' or cmd =='dir' and clientCmd == 0:
+                lsing(cmd, clientS)
 
+            else:
+
+                print("Incorrect command from user !!!!")
 
 if __name__ == "__main__":
     main()
