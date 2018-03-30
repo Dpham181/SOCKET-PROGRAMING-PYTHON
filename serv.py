@@ -2,7 +2,9 @@ from __future__ import print_function
 import socket
 import subprocess
 import sys
+import os
 import pickle
+
 bufferSize = 4096
 request_queue = 10
 serverName = 'localhost'
@@ -13,7 +15,7 @@ serverSource = 'serv.py'
 
 # checking buffer with for loop
 
-def checkBuffer(checksocket,inBytes):
+def checkBuffer(checksocket, inBytes):
 
     inititalBuff = ''
 
@@ -31,7 +33,6 @@ def checkBuffer(checksocket,inBytes):
 ##########################################
 
 # Attemping temporary socket
-
 
 def tempSocket(client):
 
@@ -56,17 +57,11 @@ def tempSocket(client):
 
     return ClientSock
 
-
-
-
-
 ##########################################
-
 
 # receive a file from client
 
-def revFile(textFile,welcomeSocket):
-
+def revFile(textFile, welcomeSocket):
     SizeBuff = checkBuffer(welcomeSocket,10)
 
     if SizeBuff == '':
@@ -75,7 +70,7 @@ def revFile(textFile,welcomeSocket):
     else:
         RealSize = int(SizeBuff)
 
-    print ("Size.",RealSize)
+    print ("Size.", RealSize)
 
     readingfile = checkBuffer(welcomeSocket, RealSize)
 
@@ -85,13 +80,7 @@ def revFile(textFile,welcomeSocket):
 
     fw.close()
 
-
-
-
-
-
 #############################################
-
 
 # download file from sever by client
 
@@ -102,36 +91,32 @@ def DownloadFile (textFile, welcomeSocket):
     except OSError:
         print("Fail to open this file:", textFile)
         welcomeSocket.close()
+        print ("now sending the file name",textFile)
 
-        print ("now sending the fife name",textFile)
-    fileData = None
-    numSent = 0
-    while True:
-        fileData = myFile.read()
+    with myFile:
+        textSize = myFile.read()
 
-        if fileData:
+        if textSize:
 
+            SizeofText= str(len(textSize))
 
-            dataSizeStr = str(len(fileData))
+            RealSizeofText = len(SizeofText)
 
+            while RealSizeofText < 10:
+                SizeofText ='0'+SizeofText
 
-            while len(dataSizeStr) < 10:
+            textSize = SizeofText + len(myFile.read())
 
-                dataSizeStr = "0" + dataSizeStr
+            RealSizeofText = len(textSize)
 
-            fileData = dataSizeStr + fileData
+            NumTextSent = 0
 
-
-
-            while len(fileData) > numSent:
-                numSent += welcomeSocket.send(fileData[numSent:].encode(convertBits))
+            while RealSizeofText > NumTextSent:
+                NumTextSent += welcomeSocket.send(textSize[NumTextSent:].encode(convertBits))
 
         else:
-            break
-
-        print('Sent', numSent, 'bytes.')
-
-
+            print("Errors")
+       	    print('Sent', NumTextSent, 'bytes.')
 
     myFile.close()
     welcomeSocket.close()
@@ -140,62 +125,42 @@ def DownloadFile (textFile, welcomeSocket):
 
 ##############################################################################
 
-def putting ( clientS, textFile ):
+def getting(serverS, textFile):
+	tempS = tempSocket(serverS)
+
+	success = DownloadFile(textFile, tempS)
+	if success == 0;
+		print('Failed to download file', textFile)
+		serverS.send('0'.encode(convertBits))
+	else:
+		print('Download completed', textFile)
+		serverS.send('1'.encode(convertBits))
+
+def putting(clientS, textFile):
         tempS = tempSocket(clientS)
 
-        done = revFile(textFile, tempS)
-        if done == 0:
-            print('Fail to upload file', textFile)
+        success = revFile(textFile, tempS)
+        if success == 0:
+            print('Failed to upload file', textFile)
             clientS.send('0'.encode(convertBits))
         else:
-            print('Uploaded compteled', textFile)
+            print('Upload completed', textFile)
             clientS.send('1'.encode(convertBits))
-        tempS.close()
 
+def listing(serverS):
+	tempS = tempSocket(serverS)
 
-def getting(clientS, textFile):
+	
 
-    tempS = tempSocket(clientS)
+def clientaction(cmd, clientS, textFile):
+    cmd = {
+	"get": getting(serverS, textFile)
+        "put": putting(clientS, textFile) 
+	"ls": 
+	"quit": return
+    }
 
-    done = DownloadFile(textFile, tempS)
-    if done == 0:
-        print('Fail to download file', textFile)
-        clientS.send('0'.encode(convertBits))
-    else:
-        print('dowload compteled', textFile)
-        clientS.send('1'.encode(convertBits))
-
-    tempS.close()
-
-
-def quiting(clientS):
-        print("Fin connection now")
-        clientS.close()
-        exit(1)
-
-def lsing(cmd, clientS):
-    tempS = tempSocket(clientS)
-
-    directory=[]
-
-    all_files = []
-
-    for line in subprocess.getstatusoutput(cmd):
-        directory.append(line)
-
-    all_files = directory[1].split('\t')
-    i = 0
-    for singlefile in all_files:
-        if singlefile == serverSource:
-            del all_files[i]
-        i = i+1
-    data_file= pickle.dumps(all_files)
-
-    tempS.send(data_file)
-
-    tempS.close()
 ##############################################################################
-
 
 # Main
 
@@ -233,34 +198,18 @@ def main():
             command = clientS.recv(bufferSize).decode(convertBits)
 
             if not command:
-                print("Wrong command from client")
+                print("wrong command from client")
                 break
 
             clientCmd = command.count(' ')
-
             if clientCmd == 1:
                 (cmd, textFile) = command.split()
             elif clientCmd == 0:
                 cmd = command
 
-            if cmd == 'put' and clientCmd == 1:
-                 putting(clientS, textFile)
+            if  clientCmd ==1:
+                clientaction(cmd,clientS,textFile)
 
-            elif cmd == 'get' and clientCmd == 1:
-                getting(clientS,textFile)
-
-            elif cmd == 'quit' and clientCmd == 0:
-                quiting(clientS)
-                
-            elif cmd == 'ls' or cmd =='dir' and clientCmd == 0:
-                lsing(cmd, clientS)
-
-            else:
-
-                print("Incorrect command from user !!!!")
 
 if __name__ == "__main__":
     main()
-
-
-
