@@ -5,19 +5,6 @@ import sys
 import pickle  # for receiving list data
 import os.path
 
-# Specifications
-# The server shall be invoked as:
-# python serv.py <PORT NUMBER>
-# <PORT NUMBER> specifies the port at which ftp server accepts connection requests. For example: python serv.py 1234
-# The ftp client is invoked as:
-# cli <server machine> <server port>
-# <server machine> is the domain name of the server (ecs.fullerton.edu). This will be converted into 32 bit IP address using DNS lookup. For example: python cli.py ecs.fullerton.edu 1234
-# Upon connecting to the server, the client prints out ftp>, which allows the user to execute the following commands.
-# ftp> get <file name> (downloads file <file name> from the server)
-# ftp> put <filename> (uploads file <file name> to the server)
-# ftp> ls (lists files on the server)
-# ftp> quit (disconnects from the server and exits)
-
 bufferSize = 4096
 serverName = "localhost"
 codingMethod = "UTF-8"
@@ -26,15 +13,15 @@ codingMethod = "UTF-8"
 # idt$ = "    "  # Indent so that client feedback looks clean
 
 
-# Receives a specified number of bytes over a TCP socket
+# Receives the number of bytes arrving from a TCP socket
 def recvAll(sock, numBytes):
-    # The buffer
+    # declare the receive buffer
     recvBuff = ''
 
-    # Loop until all files are received
+    #loop until all files are received
     while len(recvBuff) < numBytes:
 
-        # Attempt to receive bytes
+        # initialize and declare the temporary buffer which can receives bytes
         tmpBuff = sock.recv(numBytes).decode(codingMethod)
 
         # if other side socket is closed
