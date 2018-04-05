@@ -1,0 +1,1 @@
+Packet switching and circuit switching are two networking methods for transferring data between two nodes or hosts. For a packet-switched network, data is transferred by dividing the data into individual packets and passing it through the circuits to the other host.

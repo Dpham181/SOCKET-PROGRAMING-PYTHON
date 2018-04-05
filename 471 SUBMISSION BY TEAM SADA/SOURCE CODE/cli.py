@@ -206,7 +206,7 @@ def main():
                 print("    ", 'dummit! Unable to download the file')
                 pSocket.send('0'.encode(codingMethod))
 
-        elif command == 'dir' and ftp_arg_count == 0:
+        elif command == 'dir'or command =='ls' and ftp_arg_count == 0:
             # if file not able to download the file send the command to server: ls
             pSocket.send(ans.encode(codingMethod))
 
